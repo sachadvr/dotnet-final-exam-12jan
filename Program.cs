@@ -1,6 +1,44 @@
 using dotnet.Components;
 using dotnet.Endpoints;
+using dotnet.Models;
 using dotnet.Services;
+
+if (args.Length > 0 && args[0] == "--maze")
+{
+    if (args.Length < 2)
+    {
+        Console.Error.WriteLine("dotnet run -- --maze file.txt");
+        return;
+    }
+
+    var mazePath = Path.GetFullPath(args[1]);
+    if (!File.Exists(mazePath))
+    {
+        Console.Error.WriteLine($"Fichier pas trouvé: {mazePath}");
+        return;
+    }
+
+    try
+    {
+        var input = File.ReadAllText(mazePath);
+        var maze = new Maze(input);
+        var distance = maze.GetDistance();
+        var path = maze.GetShortestPath();
+
+        Console.WriteLine($"Distance: {distance}");
+        Console.WriteLine("Chemin:");
+        foreach (var (row, col) in path)
+        {
+            Console.WriteLine($"{row},{col}");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"Maze processing failed: {ex.Message}");
+    }
+
+    return;
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
