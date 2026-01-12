@@ -1,7 +1,9 @@
 using dotnet.Components;
+using dotnet.Data;
 using dotnet.Endpoints;
 using dotnet.Models;
 using dotnet.Services;
+using Microsoft.EntityFrameworkCore;
 
 if (args.Length > 0 && args[0] == "--maze")
 {
@@ -47,8 +49,11 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 // Enregistrement des services
-builder.Services.AddSingleton<IProductService, ProductService>();
-builder.Services.AddSingleton<IDiscountService, DiscountService>();
+builder.Services.AddDbContext<EcommerceDbContext>(options =>
+    options.UseInMemoryDatabase("EcommerceDb"));
+
+builder.Services.AddScoped<IProductService, DbProductService>();
+builder.Services.AddScoped<IDiscountService, DbDiscountService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 
 var app = builder.Build();
@@ -72,5 +77,11 @@ app.MapRazorComponents<App>()
 // Mapping des endpoints de l'API
 app.MapProductEndpoints();
 app.MapOrderEndpoints();
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<EcommerceDbContext>();
+    EcommerceDbSeeder.Seed(dbContext);
+}
 
 app.Run();

@@ -1,5 +1,7 @@
+using dotnet.Data;
 using dotnet.Models;
 using dotnet.Services;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace dotnet.Tests.Services;
@@ -10,7 +12,20 @@ public sealed class ProductServiceTests
 
     public ProductServiceTests()
     {
-        _productService = new ProductService();
+        var dbContext = CreateDbContext();
+        _productService = new DbProductService(dbContext);
+    }
+
+    private static EcommerceDbContext CreateDbContext()
+    {
+        var options = new DbContextOptionsBuilder<EcommerceDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+
+        var dbContext = new EcommerceDbContext(options);
+        EcommerceDbSeeder.Seed(dbContext);
+
+        return dbContext;
     }
 
     [Fact]
