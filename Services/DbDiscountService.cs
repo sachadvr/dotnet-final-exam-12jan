@@ -1,9 +1,10 @@
+using dotnet.Data;
 using dotnet.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace dotnet.Services;
 
-[Obsolete("Utilise DbDiscountService à la place de DiscountService.")]
-internal sealed class DiscountService : IDiscountService
+internal sealed class DbDiscountService(EcommerceDbContext dbContext) : IDiscountService
 {
     private const double MinimumOrderForPromoCode = 50.0;
     private const double AutomaticDiscountThreshold = 100.0;
@@ -13,7 +14,6 @@ internal sealed class DiscountService : IDiscountService
     {
         var discounts = new List<Discount>();
 
-        // Règle métier : Remise automatique de 5% si total > 100€
         if (subtotal > AutomaticDiscountThreshold)
         {
             discounts.Add(new Discount
@@ -23,11 +23,10 @@ internal sealed class DiscountService : IDiscountService
             });
         }
 
-        // Validation et application des codes promo
         if (!string.IsNullOrWhiteSpace(promoCode))
         {
             var (promoDiscount, error) = ValidateAndApplyPromoCode(promoCode, subtotal);
-            
+
             if (error is not null)
             {
                 return (new List<Discount>(), error);
@@ -42,39 +41,29 @@ internal sealed class DiscountService : IDiscountService
         return (discounts, null);
     }
 
-    private static (Discount? discount, string? error) ValidateAndApplyPromoCode(string promoCode, double subtotal)
+    private (Discount? discount, string? error) ValidateAndApplyPromoCode(string promoCode, double subtotal)
     {
-        // Règle 2 : Les codes promos sont valides seulement si la commande dépasse 50€
         if (subtotal <= MinimumOrderForPromoCode)
         {
             return (null, "Les codes promos ne sont valables qu'à partir de 50€ d'achat");
         }
 
-        // Règle 1 : Valider le code promo
-        var discountRate = GetPromoCodeDiscountRate(promoCode);
+        var normalizedCode = promoCode.Trim().ToUpperInvariant();
+        var promo = dbContext.PromoCodes
+            .AsNoTracking()
+            .FirstOrDefault(p => p.Code == normalizedCode);
 
-        if (discountRate == 0)
+        if (promo is null)
         {
             return (null, "Le code promo est invalide");
         }
 
-        // Règle 3 : Application additive avec les autres remises
         var discount = new Discount
         {
             Type = "order",
-            Value = subtotal * discountRate
+            Value = subtotal * promo.DiscountRate
         };
 
         return (discount, null);
-    }
-
-    private static double GetPromoCodeDiscountRate(string promoCode)
-    {
-        return promoCode.ToUpperInvariant() switch
-        {
-            "DISCOUNT 20" => 0.20,
-            "DISCOUNT 10" => 0.10,
-            _ => 0
-        };
     }
 }

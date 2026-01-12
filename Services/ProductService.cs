@@ -2,6 +2,7 @@ using dotnet.Models;
 
 namespace dotnet.Services;
 
+[Obsolete("Utilise DbProductService à la place de ProductService.")]
 internal sealed class ProductService : IProductService
 {
     private readonly List<Product> _products;
