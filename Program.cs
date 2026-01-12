@@ -1,10 +1,17 @@
 using dotnet.Components;
+using dotnet.Endpoints;
+using dotnet.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+// Enregistrement des services
+builder.Services.AddSingleton<IProductService, ProductService>();
+builder.Services.AddSingleton<IDiscountService, DiscountService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
 
 var app = builder.Build();
 
@@ -23,5 +30,9 @@ app.UseAntiforgery();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+// Mapping des endpoints de l'API
+app.MapProductEndpoints();
+app.MapOrderEndpoints();
 
 app.Run();
